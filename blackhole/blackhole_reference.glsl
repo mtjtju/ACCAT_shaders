@@ -13,6 +13,8 @@ float sdSphere( vec3 p, float s )
   return length(p)-s;
 }
 
+// t[radius, sub radius]
+// p: position
 float sdTorus( vec3 p, vec2 t )
 {
   vec2 q = vec2(length(p.xz)-t.x,p.y);
@@ -65,25 +67,31 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         p += pv * dt * noncaptured; // cur ray pos
         
         // gravity
-        vec3 bhv = bh - p; // ray end to bh center
+        // ray end to bh center
+        vec3 bhv = bh - p; 
         float r = dot(bhv,bhv);
-        pv += normalize(bhv) * ((bhmass) / r); // ray dir += 1 * acceleration
+        // ray dir += 1 * acceleration
+        pv += normalize(bhv) * ((bhmass) / r); 
         
-        noncaptured = smoothstep(0.0, 0.666, sdSphere(p-bh,bhr));
+        // map sdSphere smoothly to [0, 0.666]
+        noncaptured = smoothstep(0.0, 0.666, sdSphere(p-bh,bhr)); 
         
         // Texture for the accretion disc
         float dr = length(bhv.xz);
         float da = atan(bhv.x,bhv.z);
+        // vec2[distance from p to bh center, sum of a var linear with arc length and a incre(t)]
         vec2 ra = vec2(dr,da * (0.01 + (dr - bhr)*0.002) + 2.0 * pi + iTime*0.005 );
         ra *= vec2(10.0,20.0);
         
+        // mix(a, b, ratio)  res = a + (b-a) * ratio
         vec3 dcol = mix(
           c2,
           c1,
-          pow(length(bhv)-bhr,2.0)) *
-            max(0.0,texture(iChannel1,ra*vec2(0.1,0.5)).r+0.05) * 
-            (4.0 / ((0.001+(length(bhv) - bhr)*50.0) ));
+          pow(length(bhv)-bhr,2.0)) * // farther bigger
+            max(0.0,texture(iChannel1,ra*vec2(0.1,0.5)).r+0.05) * // texture color
+            (4.0 / ((0.001+(length(bhv) - bhr)*50.0) ));          // nearer bigger
         
+        // vec3(1.0,25.0,1.0): scale torus, y /= 25
         col += max(
           vec3(0.0),
           dcol * smoothstep(0.0, 1.0, 
